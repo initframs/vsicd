@@ -16,9 +16,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	vsic "vsic/libvsic"
 
 	"github.com/pelletier/go-toml/v2"
+
+	vsic "github.com/initframs/vsic"
 )
 
 type Config struct {

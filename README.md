@@ -1,5 +1,9 @@
-# vsic
-*very* simple internet chat
+# vsicd
+
+*very* simple internet chat (vsic) daemon
+
+if you want to host a vsic server this part of the vsic project, `vsicd`, is probably what you're looking for. if you're looking to develop custom software that interacts with vsic, check out [libvsic](https://github.com/initframs/vsic).
+
 ## features
 - simple text-based protocol
 - tiny (5.2M) and fast (starts in 0.004s, stops in 1.005s*)
@@ -45,3 +49,39 @@ vsicd is pure go, so there's no need for C interop support :)
 ```bash
 CGO_ENABLED=0 go build -ldflags="-s -w" -o vsicd
 ```
+
+## protocol reference
+
+the actual vsic TCP protocol. Commands are sent in the format `COMMAND [param]`.
+
+### commands (client)
+
+the responses in the table are assuming normal behavior, they don't include cases like hitting rate limits or sending invalid parameters.
+
+
+| Command            | Sent                        | Purpose                                     | Responses                                                                                                                      |
+| ------------------ | --------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `n/a`              | when connecting to a server | inform the client they've connected         | `CONNECTED`                                                                                                                    |
+| `HELLO [username]` | when connecting to a server | initiate connection and register a username | `HELLO [username]` (note that if the name is already taken, a random numerical suffix is added), followed by an `MOTD` message |
+| `MSG [msg]`        | when sending a message      | send a message for the server to broadcast  | `MSG [username]: [msg]` is sent to all clients, including the original sender                                                  |
+| `PING`             | at specific timed intervals | tcp keepalive                               | `PONG`                                                                                                                         |
+| `BYE`              | when disconnecting          | end connection                              | `CYA`, then server ends connection.                                                                                            |
+
+
+### errors
+
+#### `ERROR 100`
+
+Sent after a malformed command or invalid parameter is received during the handshake. Terminates the connection.
+
+#### `ERROR 101`
+
+Sent after an invalid parameter is received (for example, empty `MSG`), but does not terminate the connection. Indicates the command was ignored by the server.
+
+#### `ERROR 102`
+
+Sent after an invalid command is received, but does not terminate the connection. Indicates the command was ignored by the server.
+
+#### `ERROR 200`
+
+Sent after the client attempts to send a message, but is being rate limited.
